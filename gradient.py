@@ -1,37 +1,35 @@
-def function(x, y, z):
+def function(position):
     """
-        Real-valued function of x, y, and z
+        Real-valued function from R^n to R. position s a list of length n
     """
-    value = x*y + x**(-1) + y**(-1) 
+    value = 0
+    # this function returns the distance from origin squared
+    for x in position:
+        value += x**2
+
     return value
 
 
-def partial(func, direction, step, x, y, z):
+def grad(func, step, position):
     """
-        Approximates the partial derivative of a function (func )in 
-        specified direction. Direction should be string: 'x', 'y', or 'z'.
-        Step size is step.
+        Returns a numerical approximation of the gradient of a function 
+        (func) at position (a list of length n, where n is the dimension of
+        the space we are working in).
     """
-    if direction == 'x':
-        diff = (func(x+step, y, z)-func(x-step, y, z))/(2 * step)
-        return diff
-    if direction == 'y':
-        diff = (func(x, y+step, z)-func(x, y-step, z))/(2 * step)
-        return diff
-    if direction == 'z':
-        diff = (func(x, y, z+step)-func(x, y, z-step))/(2 * step)
-        return diff
-    else:
-        print("Error: invalid partial derivative direction.")
+    partials = []
+    for i, val in enumerate(position):
+        step_forward = [] 
+        for element in position:
+            step_forward.append(element)
+        step_forward[i] += step
 
+        step_backward = []
+        for element in position:
+            step_backward.append(element)
+        step_backward[i] -= step
 
-def grad(func, step, x, y, z):
-    """
-        Returns the gradient of a function (func)
-    """
+        diff_i = (func(step_forward)-func(step_backward))/(2 * step)
+        partials.append(diff_i)
 
-    partialx = partial(func, 'x', step, x, y, z)
-    partialy = partial(func, 'y', step, x, y, z)
-    partialz = partial(func, 'z', step, x, y, z)
+    return partials
 
-    return [partialx, partialy, partialz]

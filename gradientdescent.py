@@ -11,26 +11,30 @@ def norm(u):
     return length
 
 
-def function(x, y, z):
+def function(position):
+    """ position is list of length 3 """
+    x = position[0]
+    y = position[1]
+
     value = x*y + x**(-1) + y**(-1)
     return value
 
 
-def descent(func, x0, y0, z0, diffstep):
+def descent(func, initial_pos, diffstep):
     """
-        func is function being optimized, x0, y0, and z0 represent the 
+        func is function being optimized, initial_pos is a list representin 
         initial position. diffstep is the step size for approximating the
         gradient.
     """
-    current_position = [x0, y0, z0]
-    current_grad = grad(func, diffstep, x0, y0, z0)
+    current_position = initial_pos
+    current_grad = grad(func, diffstep, initial_pos)
 
     trial_num = 0
     while norm(current_grad) > 10**(-5):
         scaled_current_grad = []
         # this loop makes scaled_current_grad equal to current_grad scaled 
         # by -0.1 times diffstep
-        for i in range(3):
+        for i in range(len(initial_pos)):
             scaled_current_grad.append(current_grad[i] * (-0.1) * diffstep)
 
         # updating the position by stepping one tenth the value of the grad
@@ -38,20 +42,15 @@ def descent(func, x0, y0, z0, diffstep):
             current_position[n] = x + scaled_current_grad[n]
 
         # updating the value of the gradient
-        current_grad = grad(func, diffstep, current_position[0], \
-                current_position[1], current_position[2])
+        current_grad = grad(func, diffstep, current_position)
         trial_num += 1
-
-
-    if trial_num == 10000:
-        print("Too many iterations")
 
     print(trial_num)
     print(current_grad)
     return current_position
 
-
-print(descent(function, 7.3, 2.2, 0, 0.01))
+initial_test = [7.3, 2.2]
+print(descent(function, initial_test, 0.01))
 
 
 for i in range(100):
