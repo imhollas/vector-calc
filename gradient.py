@@ -2,7 +2,7 @@ def function(x, y, z):
     """
         Real-valued function of x, y, and z
     """
-    value = x**2 + y**2 + z**2
+    value = x*y + x**(-1) + y**(-1) 
     return value
 
 
