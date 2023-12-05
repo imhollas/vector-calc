@@ -68,7 +68,7 @@ def descent(func, initial_pos, diffstep):
         for i in range(len(initial_pos)):
             scaled_current_grad.append(current_grad[i] * diffstepscaling * diffstep)
 
-        # updating the position by stepping one tenth the value of the grad
+        # updating the position by stepping diffstepscaling times the grad
         for n, x in enumerate(current_position):
             current_position[n] = x + scaled_current_grad[n]
 
