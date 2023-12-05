@@ -1,0 +1,114 @@
+\documentclass[11pt]{article}
+
+% basic packages
+\usepackage[margin=1in]{geometry}
+\usepackage[pdftex]{graphicx}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{custom}
+\usepackage{lipsum}
+
+% page formatting
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+\renewcommand{\sectionmark}[1]{\markright{\textsf{\arabic{section}. #1}}}
+\renewcommand{\subsectionmark}[1]{}
+\lhead{\textbf{\thepage} \ \ \nouppercase{\rightmark}}
+\chead{}
+\rhead{}
+\lfoot{}
+\cfoot{}
+\rfoot{}
+\setlength{\headheight}{14pt}
+
+\linespread{1.03} % give a little extra room
+\setlength{\parindent}{0.2in} % reduce paragraph indent a bit
+\setcounter{secnumdepth}{2} % no numbered subsubsections
+\setcounter{tocdepth}{2} % no subsubsections in ToC
+
+\begin{document}
+
+% make title page
+\thispagestyle{empty}
+\bigskip \
+\vspace{0.1cm}
+
+\begin{center}
+{\fontsize{20}{20} \selectfont \bf \sffamily Numerical Methods for Vector Calculus}
+\vskip 14pt
+{\fontsize{14}{14} \selectfont \rmfamily Ian Hollas - Honors Vector Calculus - Final Project} 
+\vskip 6pt
+\vskip 24pt
+\end{center}
+
+\large
+I implemented several numerical algorithms for solving problems involving vector calculus. Specifically, I built a program to approximate derivatives using first differences. I used this to implement gradient descent, an algorithm for finding local minima numerically. I also coded three numerical integration techniques (Monte Carlo, trapezoid rule, and Clenshaw-Curtis) and built a program to approximate path integrals with them.  
+\par
+The code (written in Python) can be found in a GitHub repository here: \\ https://github.com/imhollas/vector-calc. This report includes a description and analysis of the code.
+
+
+% make table of contents
+\newpage
+\microtoc
+\newpage
+
+% main content
+\section{Finite Differences}
+\indent Given a smooth function $f:\mathbf{R}\to\mathbf{R}$, we wish to efficiently approximate its derivative at a point $x_0$. \\
+The basic solution is to use the definition of the derivative:
+\begin{equation*}
+	f'(x_0) = \lim_{\Delta x\to 0}\frac{f(x_0+\Delta x) - f(x_0)}{\Delta x}.
+\end{equation*}
+This naturally implies an approximation:
+\begin{equation*}
+	f'(x_0) \approx \frac{f(x_0+\Delta x) - f(x_0)}{\Delta x}.
+\end{equation*}
+How good is this? We can use a Taylor series to find how the error grows with $\Delta x$:
+\begin{align*}
+	\epsilon &= \frac{f(x_0+\Delta x) - f(x_0)}{\Delta x} -f'(x_0)\\
+	&= \frac{f'(x_0)\Delta x + f''(x_0)(\Delta x)^2/2 + O((\Delta x)^3)}{\Delta x} - f'(x_0) \\
+	&= f''(x_0)\Delta x /2 + O((\Delta x)^2).
+\end{align*}
+So the error for this approximation is linear with the step size. Surprisingly, we can do better for free by taking a "centered difference" instead of a "forward difference":
+\begin{equation*}
+	f'(x_0) \approx \frac{f(x_0+\Delta x) - f(x_0-\Delta x)}{2\Delta x}.
+\end{equation*}
+The $f''$ terms in cancel, so the error is quadratic in the step size:
+\begin{align*}
+	\epsilon &= \frac{f(x_0+\Delta x) - f(x_0-\Delta x)}{2\Delta x} - f'(x_0) \\
+	&= \frac{[f''(x_0)(\Delta x)^2/2 + O((\Delta x)^3)] - [f''(x_0)(-\Delta x)^2/2 + O((\Delta x)^3)]}{2\Delta x} \\
+	&= O((\Delta x)^2).
+\end{align*}
+I used this idea (which I found in Strang, see sources) in my program (gradient.py) that numerically evaluates the gradient of any function at a given point. The program takes a function, a position, and a step size and outputs the vector of partial derivatives. One could easily apply use this to compute other things of interest (Jacobian, divergence, curl). The gradient, in particular, has an interesting application to minimization problems.
+\section{Gradient Descent}
+The problem: given a smooth function $f:D\to\mathbf{R}$ with $D\subseteq\mathbf{R}^n$, find local minima (or maxima) of $f$ on $D$ numerically. \\
+\indent I implemented a basic version of an algorithm called gradient descent. The idea is to start at a random point in $D$, compute the gradient $\nabla f$ at that point (analytically or numerically), and then take a step $\alpha \nabla f$, where $\alpha$ is a constant. For minima, choose $\alpha<0$, and for maxima, choose $\alpha>0$. This process is repeated until $|\nabla f|<\epsilon$ for some small $\epsilon$ (my code uses $\epsilon = 10^{-5}$), or $N\gg1$ steps occur (to ensure the program terminates; I used $N=10^7$). The program returns the current position and the number of steps taken. \\
+\indent For code testing, I used a slight modification of problem 3 from homework 4: minimize $f(x,y) = xy + 1/x + 1/y$ on the first quadrant, restricted to the domain $(0,100)\times(0,100)$ (a finite domain is necessary to be able to choose a random point). Analytically, we can show that this function has a local minima at $(1,1)$. I ran 1000 trials of choosing a random point in the domain and running the algorithm described above, with $\alpha = -1$. The process jumped out of the desired region 619 times, so we ignore those cases. In the remaining cases, it converged to $(1,1)$ within four decimal points of accuracy. It took an average of $\approx 9200$ steps, with standard deviation $\approx 3600$.
+\section{Numerical Integration Techniques}
+The basic problem: given a function $f:[a,b]\to\mathbf{R}$, efficiently approximate the integral $I$ of that function over the interval. Analytic techniques (setting up bounds) can be used in conjunction with the methods here to integrate functions on domains in $\mathbf{R}^n$.\\
+\indent The first method that I used was the "trapezoid rule." The idea is to divide the interval into $N$ even subintervals. We can approximate the integral $I_i$ over the $k$th subinterval by
+\begin{equation*}
+	I_i \approx \frac{f(a+(k-1)\Delta x) + f((a+k)\Delta x)}{2}\Delta x,
+\end{equation*}
+where $\Delta x = (b-a)/N$. In words, we are taking a rough average of the function on the interval. Geometrically, this is the area of a trapezoid, hence the name. The integral is thus approximated by
+\begin{align*}
+	I \approx \sum_{k=1}^N \frac{f(a+(k-1)\Delta x) + f((a+k)\Delta x)}{2}\Delta x \\
+	= \Delta x\left[\frac{f(a)+f(b)}{2} + \sum_{k=1}^{N-1} f(a + k\Delta x)\right].
+\end{align*}
+This is also known as the Euler-Maclaurin formula. My program integration.py implements this and my line integral program currently uses it to compute integrals. 
+\par 
+The second technique I implemented is a version of the Monte Carlo technique. The basic idea is that you pick a random point $t_i\in[a,b]$, evaluate $f(t_i)$, repeat this $N \gg 1$ times, and average to get
+\begin{equation*}
+	I \approx \frac{1}{N} \sum_{i=1}^N f(t_i).
+\end{equation*}
+The point choosing process can be described by a probability distribution function $p:[a,b]\to \mathbf{R}$ defined by $p(x) = 1/(b-a)$. The expected value of $f(x)$ is therefore 
+\begin{align*}
+	\langle f(x)\rangle &= \int_a^b f(x) p(x) dx = \frac{1}{b-a}\int_a^b f(x)dx = \frac{I}{b-a}.
+\end{align*}
+By the law of large numbers, the random process of choosing $t_i$, evaluating $f$, and averaging will converge to $\langle f(x)\rangle$ as $N\to\infty$, so this method will work for approximating $I$.
+\section{Path Integrals}
+
+\section{Sources}
+
+
+\end{document}
