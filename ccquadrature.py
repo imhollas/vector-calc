@@ -9,8 +9,6 @@ def cc_integrate(a, b, N, func):
         N points. func should be a function that receives a float and 
         returns a float. a, b, and N are floats. Assumes b > a.
     """
-    # we start by computing the value of f at particular points that we will
-    # use several times later
     def changed_func(x):
         """
             This is a modified version of func such that integrating
