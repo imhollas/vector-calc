@@ -6,6 +6,8 @@
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{custom}
 \usepackage{lipsum}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
 
 % page formatting
 \usepackage{fancyhdr}
@@ -26,6 +28,9 @@
 \setcounter{secnumdepth}{2} % no numbered subsubsections
 \setcounter{tocdepth}{2} % no subsubsections in ToC
 
+\theoremstyle{plain}
+
+
 \begin{document}
 
 % make title page
@@ -42,9 +47,9 @@
 \end{center}
 
 \large
-I implemented several numerical algorithms for solving problems involving vector calculus. Specifically, I built a program to approximate derivatives using first differences. I used this to implement gradient descent, an algorithm for finding local minima numerically. I also coded three numerical integration techniques (Monte Carlo, trapezoid rule, and Clenshaw-Curtis) and built a program to approximate path integrals with them.  
+I implemented several numerical algorithms for solving problems involving vector calculus. Specifically, I built a program to approximate derivatives using first differences. I used this to implement gradient descent, an algorithm for finding local minima numerically. I also coded three numerical integration techniques (Monte Carlo, trapezoids, and Clenshaw-Curtis) and built a program to approximate path integrals with them.  
 \par
-The code (written in Python) can be found in a GitHub repository here: \\ https://github.com/imhollas/vector-calc. This report includes a description and analysis of the code.
+The code (written in Python) can be found in a GitHub repository here: \\ https://github.com/imhollas/vector-calc. I opted to implement as much of the math myself as possible, as opposed to using external libraries. This report includes a description and analysis of the code.
 
 
 % make table of contents
@@ -69,7 +74,7 @@ How good is this? We can use a Taylor series to find how the error grows with $\
 	&= \frac{f'(x_0)\Delta x + f''(x_0)(\Delta x)^2/2 + O((\Delta x)^3)}{\Delta x} - f'(x_0) \\
 	&= f''(x_0)\Delta x /2 + O((\Delta x)^2).
 \end{align*}
-So the error for this approximation is linear with the step size. Surprisingly, we can do better for free by taking a "centered difference" instead of a "forward difference":
+So the error for this approximation is linear with the step size. Surprisingly, we can do better for free by taking a ``centered difference" instead of a ``forward difference":
 \begin{equation*}
 	f'(x_0) \approx \frac{f(x_0+\Delta x) - f(x_0-\Delta x)}{2\Delta x}.
 \end{equation*}
@@ -83,32 +88,42 @@ I used this idea (which I found in Strang, see sources) in my program (gradient.
 \section{Gradient Descent}
 The problem: given a smooth function $f:D\to\mathbf{R}$ with $D\subseteq\mathbf{R}^n$, find local minima (or maxima) of $f$ on $D$ numerically. \\
 \indent I implemented a basic version of an algorithm called gradient descent. The idea is to start at a random point in $D$, compute the gradient $\nabla f$ at that point (analytically or numerically), and then take a step $\alpha \nabla f$, where $\alpha$ is a constant. For minima, choose $\alpha<0$, and for maxima, choose $\alpha>0$. This process is repeated until $|\nabla f|<\epsilon$ for some small $\epsilon$ (my code uses $\epsilon = 10^{-5}$), or $N\gg1$ steps occur (to ensure the program terminates; I used $N=10^7$). The program returns the current position and the number of steps taken. \\
-\indent For code testing, I used a slight modification of problem 3 from homework 4: minimize $f(x,y) = xy + 1/x + 1/y$ on the first quadrant, restricted to the domain $(0,100)\times(0,100)$ (a finite domain is necessary to be able to choose a random point). Analytically, we can show that this function has a local minima at $(1,1)$. I ran 1000 trials of choosing a random point in the domain and running the algorithm described above, with $\alpha = -1$. The process jumped out of the desired region 619 times, so we ignore those cases. In the remaining cases, it converged to $(1,1)$ within four decimal points of accuracy. It took an average of $\approx 9200$ steps, with standard deviation $\approx 3600$.
-\section{Numerical Integration Techniques}
+\indent For code testing, I used problem 3 from homework 4: minimize $f(x,y) = xy + 1/x + 1/y$ on the first quadrant. Further, I restricted to the domain $(0,100)\times(0,100)$, as a finite domain is necessary to choose a random point. Analytically, we can show that this function has a local minima at $(1,1)$, making it a good test case. I ran 1000 trials of choosing a random point in the domain and running the algorithm described above, with $\alpha = -1$. The process ``jumped" out of the desired region 619 times (final position outside), so we ignore those cases. In the remaining cases, it converged to $(1,1)$ within $10^{-4}$. It took an average of $\sim 9200$ steps, with standard deviation $\sim 3600$.
+\section{Numerical Integration}
 The basic problem: given a function $f:[a,b]\to\mathbf{R}$, efficiently approximate the integral $I$ of that function over the interval. Analytic techniques (setting up bounds) can be used in conjunction with the methods here to integrate functions on domains in $\mathbf{R}^n$.\\
-\indent The first method that I used was the "trapezoid rule." The idea is to divide the interval into $N$ even subintervals. We can approximate the integral $I_i$ over the $k$th subinterval by
+\indent The first method that I used was the ``trapezoid rule." The idea is to divide the interval into $N$ even subintervals. We can approximate the integral $I_i$ over the $k$th subinterval by
 \begin{equation*}
 	I_i \approx \frac{f(a+(k-1)\Delta x) + f((a+k)\Delta x)}{2}\Delta x,
 \end{equation*}
-where $\Delta x = (b-a)/N$. In words, we are taking a rough average of the function on the interval. Geometrically, this is the area of a trapezoid, hence the name. The integral is thus approximated by
+where $\Delta x = (b-a)/N$. In words, we are approximating the function by the line connecting its values on the ends of the sub-interval. Geometrically, this is the area of a trapezoid, hence the name. The integral is thus approximated by
 \begin{align*}
 	I \approx \sum_{k=1}^N \frac{f(a+(k-1)\Delta x) + f((a+k)\Delta x)}{2}\Delta x \\
 	= \Delta x\left[\frac{f(a)+f(b)}{2} + \sum_{k=1}^{N-1} f(a + k\Delta x)\right].
 \end{align*}
-This is also known as the Euler-Maclaurin formula. My program integration.py implements this and my line integral program currently uses it to compute integrals. 
-\par 
-The second technique I implemented is a version of the Monte Carlo technique. The basic idea is that you pick a random point $t_i\in[a,b]$, evaluate $f(t_i)$, repeat this $N \gg 1$ times, and average to get
+This is also known as the Euler-Maclaurin formula. We show that this converges to $I$, assuming $f$ is continuous:\\
+\textbf{Proof.} Formally, the claim is that the sequence $(T_n)$, where $T_n$ is the trapezoid sum with $n$ even subintervals, converges to $I$. That is, we wish to show that for all $\epsilon>0$, there exists $N\in\mathbf{N}$ such that $|T_n-I|<\epsilon$, for all $n\geq N$. Since $f$ is integrable with integral $I$, by Darboux's criterion, there exists $\delta>0$ such that if $P$ is a partition of $[a,b]$ with $||P||<\delta$, then $|R-I|<\epsilon$ for all $R$, where $R$ is a Riemann sum relative to $P$. We claim $N=\ceil*{(b-a)/\delta}$ suffices. \\
+Let $n\in\mathbf{N}$ be greater than or equal to $N$ and consider the partition 
 \begin{equation*}
-	I \approx \frac{1}{N} \sum_{i=1}^N f(t_i).
+P_n = \bigcup_{k=0}^{n+1} a + .
+\end{equation*}
+\par 
+The second technique I implemented is a version of the Monte Carlo technique. The basic idea is to pick a random point $t_i\in[a,b]$, evaluate $f(t_i)$, repeat this $N \gg 1$ times, and average to get
+\begin{equation*}
+	I \approx \frac{b-a}{N} \sum_{i=1}^N f(t_i).
 \end{equation*}
 The point choosing process can be described by a probability distribution function $p:[a,b]\to \mathbf{R}$ defined by $p(x) = 1/(b-a)$. The expected value of $f(x)$ is therefore 
 \begin{align*}
-	\langle f(x)\rangle &= \int_a^b f(x) p(x) dx = \frac{1}{b-a}\int_a^b f(x)dx = \frac{I}{b-a}.
+	\langle f(x)\rangle &= \int_a^b f(x) p(x)\, dx = \frac{1}{b-a}\int_a^b f(x)\, dx = \frac{I}{b-a}.
 \end{align*}
 By the law of large numbers, the random process of choosing $t_i$, evaluating $f$, and averaging will converge to $\langle f(x)\rangle$ as $N\to\infty$, so this method will work for approximating $I$.
-\section{Path Integrals}
-
+\section{Line Integrals}
+As an application of the work in the previous section, I wrote a program (lineintegrals.py) that uses a numerical integration program (compatible with any of the ones I wrote and discussed) to compute line integrals. The vector operations are implemented by representing vectors as lists in Python. For example, a vector field in $\mathbf{R}^3$ is built by writing a function that takes in a list (representing coordinates) and returns a list (representing the vector value of the field at that point). Paths are represented parametrically and the velocity vector is found using the finite difference techniques discussed previously. The program then creates a function approximating the integrand (taking the dot product) and passes it to a numerical integration program to compute the line integral.
 \section{Sources}
-
+\begin{enumerate}
+	\item \emph{Computational Science and Engineering}. Strang, Gilbert. 2007.
+	\item \emph{Numerical integration and the redemption of the trapezoidal rule}. Johnson, S. G. 2011. MIT Applied Math, IAP Math Lecture Series 2011. https://ocw.mit.edu/courses/18-335j-introduction-to-numerical-methods-spring-2019/resources/mit18\_335js19\_lec33\_1/
+	\item \emph{Gradient descent, how neural networks learn}. Sanderson, Grant (3Blue1Brown). 2017. https://www.youtube.com/watch?v=IHZwWFHWa-w
+\end{enumerate}
+The centered difference trick in section 1 I learned from Strang. The trapezoidal rule I remembered vaguely from my calculus course and derived it from there. The proof of its convergence I generated using techniques I learned auditing real analysis. I found out about Clenshaw-Curtis quadrature in Johnson after searching for improvements on the trapezoidal rule. The theoretical convergence rate of the trapezoidal rule is from there. I watched Sanderson's video on gradient descent about a year ago, but didn't refer to it while implementing it.
 
 \end{document}
